@@ -1,4 +1,4 @@
-import RegisterRightPanel from "@/app/auth/components/RegisterRightPanel"
+import RegisterRightPanel from "@/app/(auth)/components/RegisterRightPanel"
 
 
 function Register() {

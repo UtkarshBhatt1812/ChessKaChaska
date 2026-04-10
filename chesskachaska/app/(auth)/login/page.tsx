@@ -1,4 +1,4 @@
-import LoginRightPanel from '@/app/auth/components/LoginRightPanel'
+import LoginRightPanel from '@/app/(auth)/components/LoginRightPanel'
 
 function LoginPage() {
   return (
