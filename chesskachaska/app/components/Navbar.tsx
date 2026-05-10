@@ -1,10 +1,15 @@
 "use client";
 
+import ProfileBadge from "@/app/components/ProfileBadge";
+import { selectAuthReady, selectAuthUser } from "@/app/store/authSlice";
+import { useAppSelector } from "@/app/store/hooks";
 import Link from "next/link";
 import { useState } from "react";
 
 export default function Navbar() {
   const [active, setActive] = useState("Puzzles");
+  const user = useAppSelector(selectAuthUser);
+  const authReady = useAppSelector(selectAuthReady);
 
   const links = ["Puzzles", "Game Room", "Learn", "Grandmasters"];
 
@@ -33,13 +38,21 @@ export default function Navbar() {
         </nav>
 
         <div className="flex items-center gap-3">
-          <Link href="/login" className="text-muted-foreground hover:text-foreground text-sm transition cursor-pointer">
-            Login
-          </Link>
+          {user ? (
+            <ProfileBadge user={user} />
+          ) : authReady ? (
+            <>
+              <Link href="/login" className="text-muted-foreground hover:text-foreground text-sm transition cursor-pointer">
+                Login
+              </Link>
 
-          <Link href="/register" className="bg-accent-hover text-foreground relative overflow-hidden rounded-lg px-4 py-2 text-sm font-medium transition-opacity cursor-pointer  hover:opacity-90">
-            Sign Up
-          </Link>
+              <Link href="/register" className="bg-accent-hover text-foreground relative overflow-hidden rounded-lg px-4 py-2 text-sm font-medium transition-opacity cursor-pointer  hover:opacity-90">
+                Sign Up
+              </Link>
+            </>
+          ) : (
+            <div className="h-10 w-10 animate-pulse rounded-full bg-white/10" />
+          )}
         </div>
       </div>
     </header>

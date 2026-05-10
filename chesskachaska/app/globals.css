@@ -3,17 +3,57 @@
 :root {
   --background: #0b0b0f;
   --surface: #111217;
-  --card: rgba(255, 255, 255, 0.03);
+  --card: rgba(255, 255, 255, 0.04);
   --foreground: #e5e7eb;
   --muted-foreground: #9ca3af;
   --accent: #6366f1;
   --accent-hover: #4f46e5;
   --border: rgba(255, 255, 255, 0.08);
   --gradient-button: linear-gradient(130deg, #6366f1, #6365f1da);
+  --body-radial: rgba(99, 102, 241, 0.16);
+  --body-gradient-start: #111217;
+  --body-gradient-mid: #0b0b0f;
+  --body-gradient-end: #05060a;
+  --soft-panel: rgba(255, 255, 255, 0.09);
+  --settings-page-bg: #0f1117;
+  --settings-sidebar: #11141b;
+  --settings-card: #171a22;
+  --settings-muted-surface: #10131a;
+  --settings-border: rgba(255, 255, 255, 0.08);
+  --settings-text: #f3f4f6;
+  --settings-text-muted: #9ba1b3;
+  --settings-text-soft: #c9cede;
   --bg-primary: var(--background);
   --bg-secondary: var(--surface);
   --text-primary: var(--foreground);
   --text-secondary: var(--muted-foreground);
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  --background: #f4f1ea;
+  --surface: #fbfaf6;
+  --card: rgba(255, 255, 255, 0.82);
+  --foreground: #171717;
+  --muted-foreground: #5d6376;
+  --accent: #4f46e5;
+  --accent-hover: #4338ca;
+  --border: rgba(23, 28, 45, 0.12);
+  --gradient-button: linear-gradient(130deg, #4f46e5, #6366f1);
+  --body-radial: rgba(79, 70, 229, 0.1);
+  --body-gradient-start: #fbfaf6;
+  --body-gradient-mid: #f4f1ea;
+  --body-gradient-end: #ebe6dc;
+  --soft-panel: rgba(20, 24, 39, 0.06);
+  --settings-page-bg: #f5f3ed;
+  --settings-sidebar: #efede6;
+  --settings-card: #ffffff;
+  --settings-muted-surface: #f6f4ee;
+  --settings-border: #e4e0d8;
+  --settings-text: #161616;
+  --settings-text-muted: #6b6f83;
+  --settings-text-soft: #3d4155;
+  color-scheme: light;
 }
 
 @theme inline {
@@ -57,12 +97,16 @@ html {
 body {
   min-height: 100%;
   background:
-    radial-gradient(circle at center, rgba(99, 102, 241, 0.16), transparent 38%),
-    linear-gradient(180deg, var(--surface) 0%, var(--background) 50%, #05060a 100%);
+    radial-gradient(circle at center, var(--body-radial), transparent 38%),
+    linear-gradient(
+      180deg,
+      var(--body-gradient-start) 0%,
+      var(--body-gradient-mid) 50%,
+      var(--body-gradient-end) 100%
+    );
   color: var(--foreground);
   font-family: var(--font-sans);
   line-height: 1.5;
-  color-scheme: dark;
 }
 
 a {

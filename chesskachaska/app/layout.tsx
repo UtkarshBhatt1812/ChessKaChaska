@@ -8,6 +8,8 @@ import {
   Inter
 } from "next/font/google";
 import "./globals.css";
+import { connectDB } from "./services/db";
+import Providers from "./providers";
 
 const geist = Geist({
   subsets: ["latin"],
@@ -48,6 +50,7 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  connectDB();
   return (
     <html lang="en" className="h-full antialiased">
       <body
@@ -61,7 +64,7 @@ export default function RootLayout({
           "min-h-full bg-bg-primary text-text-primary",
         ].join(" ")}
       >
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

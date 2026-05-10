@@ -36,7 +36,7 @@ export default function ForgotPasswordPanel() {
 
         <p className="text-center text-sm text-text-secondary flex justify-center items-center">
           Remember your password?
-          <Link href="/auth/login">
+          <Link href="/login">
             <span className="text-yellow-400 cursor-pointer hover:underline ml-2">
               Sign In
             </span>

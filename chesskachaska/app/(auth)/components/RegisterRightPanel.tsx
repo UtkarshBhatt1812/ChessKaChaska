@@ -1,12 +1,88 @@
 "use client";
 
-import { useState } from "react";
+import axios from "axios";
+import { FormEvent, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { setUser, type AuthUser } from "@/app/store/authSlice";
+import { useAppDispatch } from "@/app/store/hooks";
+
+type RegisterFormData = {
+  username: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+};
+
+type AuthResponse = {
+  message?: string;
+  user: AuthUser;
+  token: string;
+};
 
 export default function RegisterRightPanel() {
+  const dispatch = useAppDispatch();
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [formData, setFormData] = useState<RegisterFormData>({
+    username: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+  });
+  const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const updateField = (field: keyof RegisterFormData, value: string) => {
+    setFormData((current) => ({ ...current, [field]: value }));
+    setErrorMessage("");
+    setSuccessMessage("");
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (isSubmitting) {
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      setErrorMessage("Passwords do not match.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    try {
+      const { data } = await axios.post<AuthResponse>(
+        "/api/v1/auth/register",
+        formData,
+        {
+          withCredentials: true,
+        }
+      );
+
+      dispatch(setUser(data.user));
+      setSuccessMessage(data.message ?? "Account created successfully.");
+      router.replace("/play");
+      router.refresh();
+    } catch (error) {
+      if (axios.isAxiosError<{ message?: string }>(error)) {
+        setErrorMessage(
+          error.response?.data?.message ?? "Unable to create your account."
+        );
+      } else {
+        setErrorMessage("Unable to create your account right now.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="w-full h-full flex items-center justify-center bg-bg-secondary px-6">
@@ -21,78 +97,118 @@ export default function RegisterRightPanel() {
           </p>
         </div>
 
-        <div className="space-y-5 font-mono">
-          
-
-          <div className="space-y-1">
-            <label className="text-xs tracking-widest text-text-secondary">
-              USERNAME
-            </label>
-            <input
-              type="text"
-              placeholder="grandmaster_vov"
-              className="w-full px-4 py-3 rounded-xl bg-black/40 border border-border text-sm focus:outline-none focus:ring-1 focus:ring-accent placeholder:text-gray-500"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs tracking-widest text-text-secondary">
-              EMAIL
-            </label>
-            <input
-              type="email"
-              placeholder="you@example.com"
-              className="w-full px-4 py-3 rounded-xl bg-black/40 border border-border text-sm focus:outline-none focus:ring-1 focus:ring-accent placeholder:text-gray-500"
-            />
-          </div>
-
-
-          <div className="space-y-1">
-            <label className="text-xs tracking-widest text-text-secondary">
-              PASSWORD
-            </label>
-
-            <div className="relative">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-5 font-mono">
+            <div className="space-y-1">
+              <label className="text-xs tracking-widest text-text-secondary">
+                USERNAME
+              </label>
               <input
-                type={showPassword ? "text" : "password"}
-                className="w-full px-4 py-3 rounded-xl bg-black/40 border border-border text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+                type="text"
+                value={formData.username}
+                onChange={(event) => updateField("username", event.target.value)}
+                placeholder="grandmaster_vov"
+                autoComplete="username"
+                required
+                minLength={3}
+                maxLength={20}
+                className="w-full rounded-xl border border-border bg-black/40 px-4 py-3 text-sm placeholder:text-gray-500 focus:ring-1 focus:ring-accent focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={isSubmitting}
               />
+            </div>
 
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-3 text-text-secondary hover:text-white"
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
+            <div className="space-y-1">
+              <label className="text-xs tracking-widest text-text-secondary">
+                EMAIL
+              </label>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(event) => updateField("email", event.target.value)}
+                placeholder="you@example.com"
+                autoComplete="email"
+                required
+                className="w-full rounded-xl border border-border bg-black/40 px-4 py-3 text-sm placeholder:text-gray-500 focus:ring-1 focus:ring-accent focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs tracking-widest text-text-secondary">
+                PASSWORD
+              </label>
+
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={formData.password}
+                  onChange={(event) => updateField("password", event.target.value)}
+                  autoComplete="new-password"
+                  required
+                  minLength={8}
+                  className="w-full rounded-xl border border-border bg-black/40 px-4 py-3 text-sm focus:ring-1 focus:ring-accent focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={isSubmitting}
+                />
+
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-3 text-text-secondary hover:text-white"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs tracking-widest text-text-secondary">
+                CONFIRM PASSWORD
+              </label>
+
+              <div className="relative">
+                <input
+                  type={showConfirm ? "text" : "password"}
+                  value={formData.confirmPassword}
+                  onChange={(event) =>
+                    updateField("confirmPassword", event.target.value)
+                  }
+                  autoComplete="new-password"
+                  required
+                  minLength={8}
+                  className="w-full rounded-xl border border-border bg-black/40 px-4 py-3 text-sm focus:ring-1 focus:ring-accent focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={isSubmitting}
+                />
+
+                <button
+                  type="button"
+                  onClick={() => setShowConfirm(!showConfirm)}
+                  className="absolute right-3 top-3 text-text-secondary hover:text-white"
+                >
+                  {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs tracking-widest text-text-secondary">
-              CONFIRM PASSWORD
-            </label>
+          {(errorMessage || successMessage) && (
+            <p
+              aria-live="polite"
+              className={`text-sm font-mono ${
+                errorMessage ? "text-red-400" : "text-emerald-400"
+              }`}
+            >
+              {errorMessage || successMessage}
+            </p>
+          )}
 
-            <div className="relative">
-              <input
-                type={showConfirm ? "text" : "password"}
-                className="w-full px-4 py-3 rounded-xl bg-black/40 border border-border text-sm focus:outline-none focus:ring-1 focus:ring-accent"
-              />
-
-              <button
-                type="button"
-                onClick={() => setShowConfirm(!showConfirm)}
-                className="absolute right-3 top-3 text-text-secondary hover:text-white"
-              >
-                {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <button className="w-full rounded-xl bg-gradient-btn py-3 font-mono font-medium text-foreground transition-all hover:opacity-90">
-          Create Account
-        </button>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full rounded-xl bg-gradient-btn py-3 font-mono font-medium text-foreground transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isSubmitting ? "Creating Account..." : "Create Account"}
+          </button>
+        </form>
 
 
         <div className="flex items-center gap-4 text-xs text-text-secondary">
@@ -103,7 +219,10 @@ export default function RegisterRightPanel() {
 
         {/* GOOGLE */}
         <div className="flex gap-4">
-          <button className="flex-1 rounded-lg bg-black/40 hover:bg-white/10 transition text-sm outline-[0.1px] outline-accent flex justify-center gap-3 items-center py-3 cursor-pointer">
+          <button
+            type="button"
+            className="flex flex-1 cursor-pointer items-center justify-center gap-3 rounded-lg bg-black/40 py-3 text-sm outline-[0.1px] outline-accent transition hover:bg-white/10"
+          >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="h-5 w-5">
               <path fill="#EA4335" d="M24 9.5c3.54 0 6.68 1.22 9.17 3.6l6.86-6.86C35.88 2.06 30.39 0 24 0 14.62 0 6.51 5.38 2.69 13.22l7.99 6.2C12.43 13.12 17.7 9.5 24 9.5z"/>
               <path fill="#4285F4" d="M46.5 24.5c0-1.63-.15-3.2-.43-4.72H24v9.02h12.67c-.55 2.97-2.19 5.48-4.68 7.18l7.2 5.59c4.2-3.87 6.61-9.57 6.61-16.07z"/>
@@ -117,7 +236,7 @@ export default function RegisterRightPanel() {
 
         <p className="text-center text-sm text-text-secondary flex justify-center items-center">
           Already have an account?
-          <Link href="/auth/login">
+          <Link href="/login">
             <span className="text-yellow-400 cursor-pointer hover:underline ml-2">
               Sign In
             </span>
