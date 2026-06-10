@@ -55,6 +55,9 @@ export class GameInstance {
   timers: TimerState;
   drawOfferedBy: PlayerColor | null = null;
   private timerInterval: NodeJS.Timeout | null = null;
+  private nextBroadcastAt = 0;
+  private onSecondTick: ((gameState: GameState) => void) | null = null;
+  private onTimeout: ((timedOut: PlayerColor) => void) | null = null;
 
   constructor(roomCode: string, initialSeconds: number) {
     this.roomCode = roomCode;
@@ -67,9 +70,19 @@ export class GameInstance {
     };
   }
 
-  startTimers() {
+  startTimers(
+    onSecondTick?: (gameState: GameState) => void,
+    onTimeout?: (timedOut: PlayerColor) => void
+  ) {
+    if (this.timerInterval) {
+      clearInterval(this.timerInterval);
+    }
+
+    this.onSecondTick = onSecondTick ?? null;
+    this.onTimeout = onTimeout ?? null;
     this.timers.active = true;
     this.timers.lastTick = Date.now();
+    this.nextBroadcastAt = this.timers.lastTick + 1000;
     this.timerInterval = setInterval(() => this.tick(), 100);
   }
 
@@ -86,10 +99,25 @@ export class GameInstance {
     } else {
       this.timers.black = Math.max(0, this.timers.black - elapsed);
     }
+
+    const timedOut = this.isTimeout();
+    if (timedOut) {
+      const onTimeout = this.onTimeout;
+      this.stopTimers();
+      onTimeout?.(timedOut);
+      return;
+    }
+
+    if (now >= this.nextBroadcastAt) {
+      this.nextBroadcastAt = now + 1000;
+      this.onSecondTick?.(this.getState());
+    }
   }
 
   stopTimers() {
     this.timers.active = false;
+    this.onSecondTick = null;
+    this.onTimeout = null;
     if (this.timerInterval) {
       clearInterval(this.timerInterval);
       this.timerInterval = null;

@@ -149,11 +149,14 @@ export type RoomCreatedPayload = {
 export type PlayerJoinedPayload = {
   player: PlayerInfo;
   room: RoomState;
+  myColor?: PlayerColor;
 };
 
 export type SpectatorJoinedPayload = {
   spectator: SpectatorInfo;
   spectatorCount: number;
+  room?: RoomState;
+  gameState?: GameState;
 };
 
 export type MoveMadePayload = {

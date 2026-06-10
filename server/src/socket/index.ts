@@ -62,6 +62,18 @@ export function createSocketServer(
         const { roomCode, color } = session.session;
         roomManager.markDisconnected(roomCode, userId);
         socket.to(roomCode).emit("player_disconnected", { color, username });
+      } else {
+        const roomCode = roomManager.removeSpectatorBySocket(socket.id);
+        if (roomCode) {
+          const room = roomManager.get(roomCode);
+          if (room) {
+            socket.to(roomCode).emit("spectator_joined", {
+              spectator: { userId, username, socketId: socket.id },
+              spectatorCount: room.spectators.length,
+              room,
+            });
+          }
+        }
       }
 
       sessionManager.unregisterSocket(socket.id);

@@ -145,6 +145,18 @@ export class RoomManager {
     return null;
   }
 
+  removeSpectatorBySocket(socketId: string): string | null {
+    for (const [code, room] of this.rooms.entries()) {
+      const idx = room.spectators.findIndex((s) => s.socketId === socketId);
+      if (idx !== -1) {
+        room.spectators.splice(idx, 1);
+        return code;
+      }
+    }
+
+    return null;
+  }
+
   getPlayerColor(code: string, userId: string): PlayerColor | null {
     const room = this.rooms.get(code);
     if (!room) return null;

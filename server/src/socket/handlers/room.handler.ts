@@ -103,9 +103,35 @@ export function registerRoomHandlers(
       if (updatedRoom.white && updatedRoom.black) {
         roomManager.setStatus(roomCode, "active");
         const game = gameManager.get(roomCode);
-        if (game) game.startTimers();
+        if (game) {
+          game.startTimers(
+            (gameState) => {
+              io.to(roomCode).emit("game_state", gameState);
+            },
+            (timedOut) => {
+              const gameState = game.getState();
+              const winner = timedOut === "white" ? "black" : "white";
 
-        io.to(roomCode).emit("player_joined", {
+              roomManager.setStatus(roomCode, "completed");
+              io.to(roomCode).emit("game_over", {
+                gameState,
+                winner,
+                termination: "timeout",
+              });
+              logger.info(`Game over in ${roomCode}: timeout, winner: ${winner}`);
+            }
+          );
+        }
+
+        // Notify the joining player with their assigned color
+        socket.emit("player_joined", {
+          player: { userId, username, socketId: socket.id, color, connected: true },
+          room: updatedRoom,
+          myColor: color,
+        });
+
+        // Notify the other player(s) in the room (no myColor for them)
+        socket.to(roomCode).emit("player_joined", {
           player: { userId, username, socketId: socket.id, color, connected: true },
           room: updatedRoom,
         });
@@ -116,6 +142,7 @@ export function registerRoomHandlers(
         socket.emit("player_joined", {
           player: { userId, username, socketId: socket.id, color, connected: true },
           room: updatedRoom,
+          myColor: color,
         });
       }
 
@@ -135,11 +162,13 @@ export function registerRoomHandlers(
 
       const updatedRoom = roomManager.get(roomCode)!;
 
-      socket.emit("game_state", gameManager.get(roomCode)!.getState());
+      const gameState = gameManager.get(roomCode)!.getState();
 
       io.to(roomCode).emit("spectator_joined", {
         spectator: { userId, username, socketId: socket.id },
         spectatorCount: updatedRoom.spectators.length,
+        room: updatedRoom,
+        gameState,
       });
 
       logger.info(`${username} joined room ${roomCode} as spectator`);
