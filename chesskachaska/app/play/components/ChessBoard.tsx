@@ -1,7 +1,7 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import { useCallback, useMemo, useState } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { Chessboard as ReactChessboard } from "react-chessboard";
 import type {
   ChessboardOptions,
   PieceDropHandlerArgs,
@@ -14,10 +14,20 @@ type ReactChessboardProps = {
   options?: ChessboardOptions;
 };
 
-const Chessboard = dynamic<ReactChessboardProps>(
-  () => import("react-chessboard").then((mod) => mod.Chessboard),
-  { ssr: false }
-);
+const STARTING_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
+function normalizeBoardPosition(position: string) {
+  return position === "start" ? STARTING_FEN : position;
+}
+
+// Next.js Turbopack has issues with dynamic importing named exports of this library,
+// so we use a standard static import, but only render when mounted (client-side) to avoid SSR hydration mismatches.
+const Chessboard = (props: ReactChessboardProps) => {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
+  return <ReactChessboard options={props.options} />;
+};
 
 type ChessBoardProps = {
   position: string;
@@ -110,7 +120,7 @@ export default function ChessBoard({
 
   const options = useMemo<ChessboardOptions>(
     () => ({
-      position,
+      position: normalizeBoardPosition(position),
       boardOrientation,
       allowDragging: gameStarted,
       allowDragOffBoard: false,

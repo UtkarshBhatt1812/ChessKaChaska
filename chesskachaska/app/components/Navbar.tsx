@@ -11,7 +11,12 @@ export default function Navbar() {
   const user = useAppSelector(selectAuthUser);
   const authReady = useAppSelector(selectAuthReady);
 
-  const links = ["Puzzles", "Game Room", "Learn", "Grandmasters"];
+  const links = [
+    { label: "Puzzles", href: "/study" },
+    { label: "Game Room", href: "/lobby" },
+    { label: "Learn", href: "/study" },
+    { label: "Grandmasters", href: "/study" },
+  ];
 
   return (
     <header className="sticky top-0 z-50 w-full px-4 sm:px-8 py-4">
@@ -22,16 +27,17 @@ export default function Navbar() {
         </h1>
         <nav className="text-muted-foreground hidden gap-8 text-sm md:flex ">
           {links.map((item) => (
-            <Link href={'/'}
-              key={item}
-              onClick={() => setActive(item)}
+            <Link
+              href={item.href}
+              key={item.label}
+              onClick={() => setActive(item.label)}
               className="relative group transition cursor-pointer "
             >
-              {item}
+              {item.label}
               <span className="bg-yellow-500 absolute inset-0 rounded-md opacity-0 blur-lg transition group-hover:opacity-3" />
               <span
                 className={`bg-yellow-500 absolute -bottom-1 left-0 h-[2px] transition-all duration-300 
-                ${active === item ? "w-full" : "w-0 group-hover:w-full"}`}
+                ${active === item.label ? "w-full" : "w-0 group-hover:w-full"}`}
               />
             </Link>
           ))}

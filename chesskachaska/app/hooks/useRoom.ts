@@ -11,13 +11,36 @@ import {
   playerDisconnected,
   playerReconnected,
   reconnectSuccess,
-  setJoinedAsSpectator,
   setError,
   setConnectionStatus,
   clearRoom,
 } from "@/app/store/roomSlice";
 import { messagesLoaded } from "@/app/store/chatSlice";
-import type { TimeControl } from "@/app/store/roomSlice";
+import type { GameState, PlayerColor, RoomState, SpectatorInfo, TimeControl } from "@/app/store/roomSlice";
+
+type RoomCreatedPayload = {
+  room: RoomState;
+  myColor: PlayerColor;
+};
+
+type PlayerJoinedPayload = {
+  room: RoomState;
+  myColor?: PlayerColor;
+};
+
+type SpectatorJoinedPayload = {
+  spectator: SpectatorInfo;
+  spectatorCount: number;
+  room?: RoomState;
+  gameState?: GameState;
+};
+
+type ReconnectSuccessPayload = {
+  room: RoomState;
+  gameState: GameState;
+  myColor: PlayerColor;
+  chatHistory: Parameters<typeof messagesLoaded>[0];
+};
 
 export function useRoom() {
   const dispatch = useAppDispatch();
@@ -25,36 +48,43 @@ export function useRoom() {
   useEffect(() => {
     const socket = getSocket();
 
-    const onRoomCreated = (payload: any) => {
+    const onRoomCreated = (payload: RoomCreatedPayload) => {
       dispatch(roomCreated({ room: payload.room, myColor: payload.myColor }));
     };
 
-    const onPlayerJoined = (payload: any) => {
-      dispatch(playerJoined({ room: payload.room }));
+    const onPlayerJoined = (payload: PlayerJoinedPayload) => {
+      dispatch(playerJoined({ room: payload.room, myColor: payload.myColor }));
     };
 
-    const onSpectatorJoined = (payload: any) => {
-      dispatch(spectatorJoined({ spectatorCount: payload.spectatorCount }));
+    const onSpectatorJoined = (payload: SpectatorJoinedPayload) => {
+      dispatch(
+        spectatorJoined({
+          spectatorCount: payload.spectatorCount,
+          room: payload.room,
+          gameState: payload.gameState,
+          joinedAsSpectator: payload.spectator.socketId === socket.id,
+        })
+      );
     };
 
-    const onGameState = (gameState: any) => {
+    const onGameState = (gameState: GameState) => {
       dispatch(gameStateUpdated(gameState));
     };
 
-    const onPlayerDisconnected = (payload: any) => {
+    const onPlayerDisconnected = (payload: { color: PlayerColor }) => {
       dispatch(playerDisconnected(payload));
     };
 
-    const onPlayerReconnected = (payload: any) => {
+    const onPlayerReconnected = (payload: { color: PlayerColor }) => {
       dispatch(playerReconnected(payload));
     };
 
-    const onReconnectFailed = (payload: any) => {
+    const onReconnectFailed = (payload: { reason: string }) => {
       dispatch(setError(payload.reason));
       dispatch(setConnectionStatus("disconnected"));
     };
 
-    const onReconnectSuccess = (payload: any) => {
+    const onReconnectSuccess = (payload: ReconnectSuccessPayload) => {
       dispatch(
         reconnectSuccess({
           room: payload.room,
@@ -65,7 +95,7 @@ export function useRoom() {
       dispatch(messagesLoaded(payload.chatHistory));
     };
 
-    const onError = (payload: any) => {
+    const onError = (payload: { message: string }) => {
       dispatch(setError(payload.message));
     };
 

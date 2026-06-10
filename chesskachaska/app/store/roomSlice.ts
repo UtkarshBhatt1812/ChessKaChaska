@@ -101,15 +101,36 @@ const roomSlice = createSlice({
       state.isSpectator = false;
       state.error = null;
     },
-    playerJoined(state, action: PayloadAction<{ room: RoomState }>) {
+    playerJoined(state, action: PayloadAction<{ room: RoomState; myColor?: PlayerColor }>) {
       state.room = action.payload.room;
+      if (action.payload.myColor) {
+        state.myColor = action.payload.myColor;
+        state.isSpectator = false;
+      }
     },
     spectatorJoined(
       state,
-      action: PayloadAction<{ spectatorCount: number }>
+      action: PayloadAction<{
+        spectatorCount: number;
+        room?: RoomState;
+        gameState?: GameState;
+        joinedAsSpectator?: boolean;
+      }>
     ) {
-      if (state.room) {
+      if (action.payload.room) {
+        state.room = action.payload.room;
+      } else if (state.room) {
         state.room.spectators = state.room.spectators ?? [];
+      }
+
+      if (action.payload.gameState) {
+        state.gameState = action.payload.gameState;
+      }
+
+      if (action.payload.joinedAsSpectator) {
+        state.myColor = null;
+        state.isSpectator = true;
+        state.error = null;
       }
     },
     gameStateUpdated(state, action: PayloadAction<GameState>) {

@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Hero() {
   return (
     <section className="relative flex min-h-[82vh] items-center justify-center overflow-hidden px-6 text-center sm:px-8">
@@ -25,12 +27,12 @@ export default function Hero() {
         </p>
 
         <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-          <button className="bg-gradient-btn cursor-pointer rounded-lg px-6 py-3 text-foreground transition-transform hover:scale-105 duration-300">
+          <Link href="/play" className="bg-gradient-btn cursor-pointer rounded-lg px-6 py-3 text-foreground transition-transform hover:scale-105 duration-300">
             Play Now
-          </button>
-          <button className="text-muted-foreground cursor-pointer transition-colors hover:text-foreground">
+          </Link>
+          <Link href="/study" className="text-muted-foreground cursor-pointer transition-colors hover:text-foreground">
             Explore Study →
-          </button>
+          </Link>
         </div>
       </div>
     </section>

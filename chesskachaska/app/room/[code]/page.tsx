@@ -2,9 +2,9 @@
 
 import { useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useAppSelector, useAppDispatch } from "@/app/store/hooks";
+import { useAppSelector } from "@/app/store/hooks";
 import { selectAuthUser } from "@/app/store/authSlice";
-import { selectRoom, selectRoomError, clearRoom } from "@/app/store/roomSlice";
+import { selectRoom, selectRoomError } from "@/app/store/roomSlice";
 import { useSocket } from "@/app/hooks/useSocket";
 import { useRoom } from "@/app/hooks/useRoom";
 import TopBar from "@/app/play/components/TopBar";
@@ -13,9 +13,8 @@ import MultiplayerArena from "./components/MultiplayerArena";
 
 export default function GameRoomPage() {
   const params = useParams();
-  const code = params.code as string;
+  const code = (params.code as string).toUpperCase();
   const router = useRouter();
-  const dispatch = useAppDispatch();
 
   const currentUser = useAppSelector(selectAuthUser);
   const room = useAppSelector(selectRoom);
@@ -26,7 +25,7 @@ export default function GameRoomPage() {
 
   useEffect(() => {
 
-    if (status === "connected" && !room) {
+    if (status === "connected" && room?.code !== code) {
       joinRoom(code);
     }
   }, [status, room, code, joinRoom]);

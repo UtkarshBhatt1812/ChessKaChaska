@@ -7,6 +7,8 @@ import ChessBoard from "@/app/play/components/ChessBoard";
 import PlayerCard from "@/app/play/components/PlayerCard";
 import ChatSidebar from "./ChatSidebar";
 
+const STARTING_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
 type Props = {
   roomCode: string;
 };
@@ -68,7 +70,6 @@ export default function MultiplayerArena({ roomCode }: Props) {
 
   return (
     <div className="flex h-full flex-col lg:flex-row gap-8 items-center lg:items-stretch justify-center">
-      {/* Board Column */}
       <div className="flex flex-col gap-6 w-full max-w-[640px] flex-1">
         {error && (
           <div className="mb-2 px-3 py-2 bg-red-600/10 border border-red-600/30 rounded text-sm text-red-300">
@@ -79,7 +80,7 @@ export default function MultiplayerArena({ roomCode }: Props) {
 
         
         <ChessBoard
-          position={gameState?.fen || "start"}
+          position={gameState?.fen || STARTING_FEN}
           gameStarted={isGameActive}
           gameMode="multiplayer"
           currentTurn={gameState?.turn ?? "w"}
