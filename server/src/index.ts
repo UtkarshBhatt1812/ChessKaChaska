@@ -22,7 +22,7 @@ async function bootstrap() {
     helmet({
       crossOriginResourcePolicy: { policy: "cross-origin" },
     })
-  );
+  ); 
   app.use(
     cors({
       origin: config.corsOrigin,
