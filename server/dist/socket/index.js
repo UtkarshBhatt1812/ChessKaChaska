@@ -48,6 +48,19 @@ function createSocketServer(httpServer) {
                 RoomManager_1.roomManager.markDisconnected(roomCode, userId);
                 socket.to(roomCode).emit("player_disconnected", { color, username });
             }
+            else {
+                const roomCode = RoomManager_1.roomManager.removeSpectatorBySocket(socket.id);
+                if (roomCode) {
+                    const room = RoomManager_1.roomManager.get(roomCode);
+                    if (room) {
+                        socket.to(roomCode).emit("spectator_joined", {
+                            spectator: { userId, username, socketId: socket.id },
+                            spectatorCount: room.spectators.length,
+                            room,
+                        });
+                    }
+                }
+            }
             SessionManager_1.sessionManager.unregisterSocket(socket.id);
             (0, rateLimiter_1.clearSocketLimits)(socket.id);
         });

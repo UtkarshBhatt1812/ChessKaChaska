@@ -1,5 +1,4 @@
 import { Server, Socket } from "socket.io";
-import { v4 as uuidv4 } from "uuid";
 import { roomManager } from "../../managers/RoomManager";
 import { gameManager } from "../../managers/GameManager";
 import { sessionManager } from "../../managers/SessionManager";

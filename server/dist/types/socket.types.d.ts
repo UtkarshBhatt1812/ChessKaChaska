@@ -112,6 +112,8 @@ export type PlayerJoinedPayload = {
 export type SpectatorJoinedPayload = {
     spectator: SpectatorInfo;
     spectatorCount: number;
+    room?: RoomState;
+    gameState?: GameState;
 };
 export type MoveMadePayload = {
     move: MoveRecord;

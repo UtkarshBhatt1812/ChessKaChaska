@@ -1,5 +1,5 @@
 import { Server, Socket } from "socket.io";
-import { v4 as uuidv4 } from "uuid";
+import { randomUUID } from "crypto";
 import { roomManager } from "../../managers/RoomManager";
 import { isRateLimited } from "../../middleware/rateLimiter";
 import ChatMessageModel from "../../models/ChatMessage";
@@ -55,7 +55,7 @@ export function registerChatHandlers(
     if (!cleanMsg) return;
 
     const chatMsg: ChatMessage = {
-      id: uuidv4(),
+      id: randomUUID(),
       roomCode,
       userId,
       username,

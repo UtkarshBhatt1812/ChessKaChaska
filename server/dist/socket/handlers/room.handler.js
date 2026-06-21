@@ -69,8 +69,21 @@ function registerRoomHandlers(io, socket) {
             if (updatedRoom.white && updatedRoom.black) {
                 RoomManager_1.roomManager.setStatus(roomCode, "active");
                 const game = GameManager_1.gameManager.get(roomCode);
-                if (game)
-                    game.startTimers();
+                if (game) {
+                    game.startTimers((gameState) => {
+                        io.to(roomCode).emit("game_state", gameState);
+                    }, (timedOut) => {
+                        const gameState = game.getState();
+                        const winner = timedOut === "white" ? "black" : "white";
+                        RoomManager_1.roomManager.setStatus(roomCode, "completed");
+                        io.to(roomCode).emit("game_over", {
+                            gameState,
+                            winner,
+                            termination: "timeout",
+                        });
+                        logger_1.logger.info(`Game over in ${roomCode}: timeout, winner: ${winner}`);
+                    });
+                }
                 // Notify the joining player with their assigned color
                 socket.emit("player_joined", {
                     player: { userId, username, socketId: socket.id, color, connected: true },
@@ -106,10 +119,12 @@ function registerRoomHandlers(io, socket) {
                 return;
             }
             const updatedRoom = RoomManager_1.roomManager.get(roomCode);
-            socket.emit("game_state", GameManager_1.gameManager.get(roomCode).getState());
+            const gameState = GameManager_1.gameManager.get(roomCode).getState();
             io.to(roomCode).emit("spectator_joined", {
                 spectator: { userId, username, socketId: socket.id },
                 spectatorCount: updatedRoom.spectators.length,
+                room: updatedRoom,
+                gameState,
             });
             logger_1.logger.info(`${username} joined room ${roomCode} as spectator`);
         }

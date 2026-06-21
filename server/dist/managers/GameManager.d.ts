@@ -13,8 +13,11 @@ export declare class GameInstance {
     timers: TimerState;
     drawOfferedBy: PlayerColor | null;
     private timerInterval;
+    private nextBroadcastAt;
+    private onSecondTick;
+    private onTimeout;
     constructor(roomCode: string, initialSeconds: number);
-    startTimers(): void;
+    startTimers(onSecondTick?: (gameState: GameState) => void, onTimeout?: (timedOut: PlayerColor) => void): void;
     private tick;
     stopTimers(): void;
     getRemainingMs(): {

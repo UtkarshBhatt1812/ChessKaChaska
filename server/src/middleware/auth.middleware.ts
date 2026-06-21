@@ -1,7 +1,6 @@
 import { Socket } from "socket.io";
-import { createHmac, timingSafeEqual } from "crypto";
+import { createHmac, randomUUID, timingSafeEqual } from "crypto";
 import { parse as parseCookies } from "cookie";
-import { v4 as uuidv4 } from "uuid";
 import { config } from "../config/env";
 import { SocketData } from "../types/socket.types";
 
@@ -89,7 +88,7 @@ export function socketAuthMiddleware(
   }
 
   // 3. Guest access — allow with generated ID
-  const guestId = `guest:${uuidv4()}`;
+  const guestId = `guest:${randomUUID()}`;
   const guestUsername =
     (socket.handshake.auth as Record<string, string>)?.guestName ||
     `Guest_${guestId.slice(6, 11)}`;

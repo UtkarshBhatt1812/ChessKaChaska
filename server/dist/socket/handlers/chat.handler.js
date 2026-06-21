@@ -6,7 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getChatHistory = getChatHistory;
 exports.registerChatHandlers = registerChatHandlers;
 exports.clearChatHistory = clearChatHistory;
-const uuid_1 = require("uuid");
+const crypto_1 = require("crypto");
 const RoomManager_1 = require("../../managers/RoomManager");
 const rateLimiter_1 = require("../../middleware/rateLimiter");
 const ChatMessage_1 = __importDefault(require("../../models/ChatMessage"));
@@ -41,7 +41,7 @@ function registerChatHandlers(io, socket) {
         if (!cleanMsg)
             return;
         const chatMsg = {
-            id: (0, uuid_1.v4)(),
+            id: (0, crypto_1.randomUUID)(),
             roomCode,
             userId,
             username,

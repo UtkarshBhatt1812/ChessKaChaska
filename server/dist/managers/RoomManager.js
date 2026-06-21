@@ -116,6 +116,16 @@ class RoomManager {
             room.spectators.splice(idx, 1);
         return null;
     }
+    removeSpectatorBySocket(socketId) {
+        for (const [code, room] of this.rooms.entries()) {
+            const idx = room.spectators.findIndex((s) => s.socketId === socketId);
+            if (idx !== -1) {
+                room.spectators.splice(idx, 1);
+                return code;
+            }
+        }
+        return null;
+    }
     getPlayerColor(code, userId) {
         const room = this.rooms.get(code);
         if (!room)

@@ -3,7 +3,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.socketAuthMiddleware = socketAuthMiddleware;
 const crypto_1 = require("crypto");
 const cookie_1 = require("cookie");
-const uuid_1 = require("uuid");
 const env_1 = require("../config/env");
 function base64UrlDecode(value) {
     return Buffer.from(value, "base64url").toString("utf-8");
@@ -73,7 +72,7 @@ function socketAuthMiddleware(socket, next) {
         }
     }
     // 3. Guest access — allow with generated ID
-    const guestId = `guest:${(0, uuid_1.v4)()}`;
+    const guestId = `guest:${(0, crypto_1.randomUUID)()}`;
     const guestUsername = socket.handshake.auth?.guestName ||
         `Guest_${guestId.slice(6, 11)}`;
     socket.data = {

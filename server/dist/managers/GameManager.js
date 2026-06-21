@@ -40,6 +40,9 @@ class GameInstance {
         this.history = [];
         this.drawOfferedBy = null;
         this.timerInterval = null;
+        this.nextBroadcastAt = 0;
+        this.onSecondTick = null;
+        this.onTimeout = null;
         this.roomCode = roomCode;
         this.chess = new chess_js_1.Chess();
         this.timers = {
@@ -49,9 +52,15 @@ class GameInstance {
             active: false,
         };
     }
-    startTimers() {
+    startTimers(onSecondTick, onTimeout) {
+        if (this.timerInterval) {
+            clearInterval(this.timerInterval);
+        }
+        this.onSecondTick = onSecondTick ?? null;
+        this.onTimeout = onTimeout ?? null;
         this.timers.active = true;
         this.timers.lastTick = Date.now();
+        this.nextBroadcastAt = this.timers.lastTick + 1000;
         this.timerInterval = setInterval(() => this.tick(), 100);
     }
     tick() {
@@ -68,9 +77,22 @@ class GameInstance {
         else {
             this.timers.black = Math.max(0, this.timers.black - elapsed);
         }
+        const timedOut = this.isTimeout();
+        if (timedOut) {
+            const onTimeout = this.onTimeout;
+            this.stopTimers();
+            onTimeout?.(timedOut);
+            return;
+        }
+        if (now >= this.nextBroadcastAt) {
+            this.nextBroadcastAt = now + 1000;
+            this.onSecondTick?.(this.getState());
+        }
     }
     stopTimers() {
         this.timers.active = false;
+        this.onSecondTick = null;
+        this.onTimeout = null;
         if (this.timerInterval) {
             clearInterval(this.timerInterval);
             this.timerInterval = null;

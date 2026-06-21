@@ -17,6 +17,7 @@ export declare class RoomManager {
     markDisconnected(code: string, userId: string): void;
     markReconnected(code: string, userId: string, newSocketId: string): void;
     removePlayer(code: string, userId: string): PlayerColor | null;
+    removeSpectatorBySocket(socketId: string): string | null;
     getPlayerColor(code: string, userId: string): PlayerColor | null;
     isPlayerInRoom(code: string, userId: string): boolean;
     isEmpty(code: string): boolean;
