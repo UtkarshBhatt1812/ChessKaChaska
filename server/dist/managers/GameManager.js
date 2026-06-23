@@ -39,15 +39,33 @@ class GameInstance {
     constructor(roomCode, initialSeconds) {
         this.history = [];
         this.drawOfferedBy = null;
+        this.rematchRequestedBy = null;
         this.timerInterval = null;
         this.nextBroadcastAt = 0;
         this.onSecondTick = null;
         this.onTimeout = null;
         this.roomCode = roomCode;
+        this.initialSeconds = initialSeconds;
         this.chess = new chess_js_1.Chess();
         this.timers = {
             white: initialSeconds * 1000,
             black: initialSeconds * 1000,
+            lastTick: Date.now(),
+            active: false,
+        };
+    }
+    /**
+     * Reset the game for a rematch — fresh board, timers, history.
+     */
+    reset() {
+        this.stopTimers();
+        this.chess = new chess_js_1.Chess();
+        this.history = [];
+        this.drawOfferedBy = null;
+        this.rematchRequestedBy = null;
+        this.timers = {
+            white: this.initialSeconds * 1000,
+            black: this.initialSeconds * 1000,
             lastTick: Date.now(),
             active: false,
         };
@@ -220,6 +238,16 @@ class GameManager {
             return null;
         game.stopTimers();
         return game.getState();
+    }
+    /**
+     * Reset the game for a rematch — fresh board, timers, history.
+     */
+    reset(roomCode) {
+        const game = this.games.get(roomCode);
+        if (!game)
+            return undefined;
+        game.reset();
+        return game;
     }
 }
 exports.GameManager = GameManager;

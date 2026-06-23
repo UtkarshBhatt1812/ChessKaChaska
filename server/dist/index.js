@@ -16,8 +16,11 @@ const logger_1 = require("./utils/logger");
 const socket_1 = require("./socket");
 const health_1 = __importDefault(require("./routes/health"));
 async function bootstrap() {
-    // 1. Connect database
-    await (0, db_1.connectDB)();
+    // 1. Connect database. Multiplayer rooms are in-memory, so keep the socket
+    // server available even if persistence is temporarily unavailable.
+    void (0, db_1.connectDB)().catch((err) => {
+        logger_1.logger.error("MongoDB unavailable; starting socket server without persistence:", err);
+    });
     // 2. Express app
     const app = (0, express_1.default)();
     app.use((0, helmet_1.default)({

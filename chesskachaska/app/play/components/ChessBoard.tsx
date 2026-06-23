@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Chessboard as ReactChessboard } from "react-chessboard";
+import { Chess, Move } from "chess.js";
 import type {
   ChessboardOptions,
   PieceDropHandlerArgs,
@@ -20,8 +21,6 @@ function normalizeBoardPosition(position: string) {
   return position === "start" ? STARTING_FEN : position;
 }
 
-// Next.js Turbopack has issues with dynamic importing named exports of this library,
-// so we use a standard static import, but only render when mounted (client-side) to avoid SSR hydration mismatches.
 const Chessboard = (props: ReactChessboardProps) => {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -37,6 +36,14 @@ type ChessBoardProps = {
   statusText: string;
   onMove: (sourceSquare: string, targetSquare: string) => boolean;
   boardOrientation?: "white" | "black";
+  game?: Chess | null;
+  lastMove?: { from: string; to: string } | null;
+  isCheck?: boolean;
+  kingSquare?: string | null;
+  isGameOver?: boolean;
+  gameOverResult?: { winner: string | null; termination: string } | null;
+  onRematch?: () => void;
+  onNewGame?: () => void;
 };
 
 export default function ChessBoard({
@@ -47,6 +54,14 @@ export default function ChessBoard({
   statusText,
   onMove,
   boardOrientation = "white",
+  game,
+  lastMove,
+  isCheck,
+  kingSquare,
+  isGameOver,
+  gameOverResult,
+  onRematch,
+  onNewGame,
 }: ChessBoardProps) {
   const boardStateKey = `${position}:${currentTurn}:${gameStarted ? "1" : "0"}`;
   const [selectionState, setSelectionState] = useState<{
@@ -56,11 +71,36 @@ export default function ChessBoard({
     boardStateKey,
     square: null,
   });
+  const [pulseSquare, setPulseSquare] = useState<string | null>(null);
+
   const selectedSquare =
     selectionState.boardStateKey === boardStateKey ? selectionState.square : null;
   const myTurn = boardOrientation === "white" ? "w" : "b";
   const allowWhiteMoves = gameMode !== "multiplayer" || myTurn === "w";
-  const allowBlackMoves = gameMode === "multiplayer" && myTurn === "b";
+  const allowBlackMoves = (gameMode === "multiplayer" && myTurn === "b" ) || gameMode === "local";
+
+  // Compute legal moves for the selected square
+  const legalMoves = useMemo<Move[]>(() => {
+    if (!selectedSquare || !game) return [];
+    try {
+      return game.moves({ square: selectedSquare as any, verbose: true });
+    } catch {
+      return [];
+    }
+  }, [selectedSquare, game]);
+
+  // Capture pulse animation trigger
+  useEffect(() => {
+    if (lastMove && game) {
+      const history = game.history({ verbose: true });
+      const lastMoveObj = history[history.length - 1];
+      if (lastMoveObj && lastMoveObj.flags.includes("c")) {
+        setPulseSquare(lastMoveObj.to);
+        const timer = setTimeout(() => setPulseSquare(null), 300);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [lastMove, game]);
 
   const setSelectedSquare = useCallback(
     (square: string | null) => {
@@ -71,7 +111,7 @@ export default function ChessBoard({
 
   const canControlPiece = useCallback(
     (pieceType?: string | null) => {
-      if (!gameStarted || !pieceType) return false;
+      if (!gameStarted || !pieceType || isGameOver) return false;
 
       const pieceColor = pieceType.startsWith("w") ? "w" : "b";
       if (pieceColor !== currentTurn) return false;
@@ -79,7 +119,7 @@ export default function ChessBoard({
       if (pieceColor === "w") return allowWhiteMoves;
       return allowBlackMoves;
     },
-    [allowBlackMoves, allowWhiteMoves, currentTurn, gameStarted]
+    [allowBlackMoves, allowWhiteMoves, currentTurn, gameStarted, isGameOver]
   );
 
   const canDragPiece = useCallback(
@@ -99,7 +139,7 @@ export default function ChessBoard({
 
   const handleSquareClick = useCallback(
     ({ piece, square }: SquareHandlerArgs) => {
-      if (!gameStarted) return;
+      if (!gameStarted || isGameOver) return;
 
       if (selectedSquare) {
         if (selectedSquare === square) {
@@ -115,14 +155,64 @@ export default function ChessBoard({
 
       setSelectedSquare(canControlPiece(piece?.pieceType) ? square : null);
     },
-    [canControlPiece, gameStarted, onMove, selectedSquare, setSelectedSquare]
+    [canControlPiece, gameStarted, isGameOver, onMove, selectedSquare, setSelectedSquare]
   );
+
+  const customSquareStyles = useMemo(() => {
+    const styles: Record<string, React.CSSProperties> = {};
+
+    if (lastMove) {
+      styles[lastMove.from] = { backgroundColor: "rgba(245, 158, 11, 0.5)" };
+      styles[lastMove.to] = { backgroundColor: "rgba(245, 158, 11, 0.5)" };
+    }
+    if (selectedSquare) {
+      styles[selectedSquare] = {
+        ...(styles[selectedSquare] || {}),
+        backgroundColor: "rgba(79, 70, 229, 0.6)",
+      };
+    }
+
+    // 3. Legal moves
+    legalMoves.forEach((move) => {
+      const isCapture = move.flags.includes("c") || move.flags.includes("e");
+      styles[move.to] = {
+        ...(styles[move.to] || {}),
+        backgroundImage: isCapture
+          ? "radial-gradient(transparent 0%, transparent 79%, rgba(0,0,0,0.3) 80%)"
+          : "radial-gradient(circle, rgba(0,0,0,0.3) 25%, transparent 26%)",
+        animation: "dot-appear 150ms ease-out both",
+      };
+    });
+
+    // 4. Check highlight
+    if (isCheck && kingSquare) {
+      styles[kingSquare] = {
+        ...(styles[kingSquare] || {}),
+        backgroundImage:
+          "radial-gradient(ellipse at center, rgba(239, 68, 68, 1) 0%, rgba(239, 68, 68, 0) 70%)",
+        animation: "check-pulse 2s infinite ease-in-out",
+      };
+    }
+
+    // 5. Capture pulse
+    if (pulseSquare) {
+      styles[pulseSquare] = {
+        ...(styles[pulseSquare] || {}),
+        animation: "capture-pulse 300ms ease-out",
+        zIndex: 10,
+      };
+    }
+
+    return styles;
+  }, [lastMove, isCheck, kingSquare, selectedSquare, legalMoves, pulseSquare]);
 
   const options = useMemo<ChessboardOptions>(
     () => ({
       position: normalizeBoardPosition(position),
       boardOrientation,
-      allowDragging: gameStarted,
+      showAnimations: true,
+      animationDurationInMs: 200,
+      allowDragging: gameStarted && !isGameOver,
       allowDragOffBoard: false,
       canDragPiece,
       onPieceDrop: handlePieceDrop,
@@ -135,13 +225,7 @@ export default function ChessBoard({
       squareStyle: {
         touchAction: "none",
       },
-      squareStyles: selectedSquare
-        ? {
-            [selectedSquare]: {
-              boxShadow: "inset 0 0 0 4px rgba(79, 70, 229, 0.75)",
-            },
-          }
-        : {},
+      squareStyles: customSquareStyles,
       darkSquareStyle: { backgroundColor: "#B58863" },
       lightSquareStyle: { backgroundColor: "#F0D9B5" },
       allowDrawingArrows: true,
@@ -150,10 +234,11 @@ export default function ChessBoard({
       boardOrientation,
       canDragPiece,
       gameStarted,
+      isGameOver,
       handlePieceDrop,
       handleSquareClick,
       position,
-      selectedSquare,
+      customSquareStyles,
     ]
   );
 
@@ -161,13 +246,43 @@ export default function ChessBoard({
     <div className="relative w-full max-w-[640px] aspect-square rounded-xl overflow-hidden shadow-2xl">
       <Chessboard options={options} />
 
-      {!gameStarted && (
+      {!gameStarted && !isGameOver && (
         <div className="absolute inset-0 bg-black/55 backdrop-blur-[2px] flex items-center justify-center p-6 text-center">
           <div className="max-w-sm rounded-2xl border border-white/10 bg-black/65 px-6 py-5">
             <p className="text-xs uppercase tracking-[0.3em] text-indigo-300">
               Board Locked
             </p>
             <p className="mt-2 text-sm text-gray-300">{statusText}</p>
+          </div>
+        </div>
+      )}
+
+      {isGameOver && gameOverResult && (
+        <div className="absolute inset-0 bg-black/55 backdrop-blur-[2px] flex items-center justify-center p-6 text-center animate-game-over-fade-in z-20">
+          <div className="max-w-sm w-full rounded-2xl border border-white/10 bg-black/80 px-6 py-6 shadow-2xl">
+            <h3 className="text-2xl font-bold text-white mb-2">
+              {gameOverResult.winner ? `${gameOverResult.winner} Wins!` : "Draw"}
+            </h3>
+            <p className="text-sm text-gray-300 mb-6">{gameOverResult.termination}</p>
+
+            <div className="flex gap-3">
+              {onRematch && (
+                <button
+                  onClick={onRematch}
+                  className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-medium transition"
+                >
+                  Rematch
+                </button>
+              )}
+              {onNewGame && (
+                <button
+                  onClick={onNewGame}
+                  className="flex-1 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl font-medium transition"
+                >
+                  New Game
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}

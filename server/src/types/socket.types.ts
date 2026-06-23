@@ -139,6 +139,15 @@ export type TypingPayload = {
   roomCode: string;
 };
 
+export type RematchRequestPayload = {
+  roomCode: string;
+};
+
+export type RematchResponsePayload = {
+  roomCode: string;
+  accepted: boolean;
+};
+
 // ─── Socket Event Payloads (Server → Client) ─────────────────────────────────
 
 export type RoomCreatedPayload = {
@@ -213,6 +222,8 @@ export type ClientToServerEvents = {
   draw_response: (payload: DrawResponsePayload) => void;
   send_message: (payload: SendMessagePayload) => void;
   typing: (payload: TypingPayload) => void;
+  rematch_request: (payload: RematchRequestPayload) => void;
+  rematch_response: (payload: RematchResponsePayload) => void;
 };
 
 export type ServerToClientEvents = {
@@ -231,5 +242,8 @@ export type ServerToClientEvents = {
   reconnect_failed: (payload: ReconnectFailedPayload) => void;
   receive_message: (payload: ChatMessage) => void;
   typing: (payload: { username: string }) => void;
+  rematch_request: (payload: { fromColor: PlayerColor }) => void;
+  rematch_accepted: (payload: { gameState: GameState }) => void;
+  game_restarted: (payload: { gameState: GameState; room: RoomState }) => void;
   error: (payload: ErrorPayload) => void;
 };

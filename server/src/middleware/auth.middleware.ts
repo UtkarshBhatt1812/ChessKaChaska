@@ -3,6 +3,7 @@ import { createHmac, randomUUID, timingSafeEqual } from "crypto";
 import { parse as parseCookies } from "cookie";
 import { config } from "../config/env";
 import { SocketData } from "../types/socket.types";
+import { logger } from "../utils/logger";
 
 type AuthPayload = {
   sub: string;
@@ -54,6 +55,7 @@ export function socketAuthMiddleware(
   next: (err?: Error) => void
 ) {
   // 1. Try bearer token from handshake.auth
+  logger.debug(`Socket auth middleware: ${socket.id} | handshake.auth:`, socket.handshake.auth);
   const token = (socket.handshake.auth as Record<string, string>)?.token;
 
   if (token) {

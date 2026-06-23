@@ -112,6 +112,68 @@ function registerGameHandlers(io, socket) {
             });
         }
     });
+    // ── rematch_request ─────────────────────────────────────────────────────────
+    socket.on("rematch_request", (payload) => {
+        if ((0, rateLimiter_1.isRateLimited)(socket.id, "rematch_request"))
+            return;
+        const { roomCode } = payload;
+        const room = RoomManager_1.roomManager.get(roomCode);
+        if (!room || room.status !== "completed") {
+            socket.emit("error", { event: "rematch_request", message: "Game is not completed." });
+            return;
+        }
+        const color = RoomManager_1.roomManager.getPlayerColor(roomCode, userId);
+        if (!color)
+            return;
+        const game = GameManager_1.gameManager.get(roomCode);
+        if (!game)
+            return;
+        game.rematchRequestedBy = color;
+        // Notify opponent
+        socket.to(roomCode).emit("rematch_request", { fromColor: color });
+        logger_1.logger.info(`${username} (${color}) requested rematch in room ${roomCode}`);
+    });
+    // ── rematch_response ────────────────────────────────────────────────────────
+    socket.on("rematch_response", (payload) => {
+        const { roomCode, accepted } = payload;
+        const color = RoomManager_1.roomManager.getPlayerColor(roomCode, userId);
+        if (!color)
+            return;
+        const game = GameManager_1.gameManager.get(roomCode);
+        if (!game || !game.rematchRequestedBy || game.rematchRequestedBy === color) {
+            socket.emit("error", { event: "rematch_response", message: "No pending rematch request." });
+            return;
+        }
+        if (!accepted) {
+            game.rematchRequestedBy = null;
+            socket.to(roomCode).emit("error", {
+                event: "rematch_request",
+                message: "Rematch declined.",
+            });
+            return;
+        }
+        // Accepted: reset the game
+        game.reset();
+        RoomManager_1.roomManager.setStatus(roomCode, "active");
+        const room = RoomManager_1.roomManager.get(roomCode);
+        // Start timers for the new game
+        game.startTimers((gameState) => {
+            io.to(roomCode).emit("game_state", gameState);
+        }, (timedOut) => {
+            const gameState = game.getState();
+            const winner = timedOut === "white" ? "black" : "white";
+            RoomManager_1.roomManager.setStatus(roomCode, "completed");
+            io.to(roomCode).emit("game_over", {
+                gameState,
+                winner,
+                termination: "timeout",
+            });
+            logger_1.logger.info(`Game over in ${roomCode}: timeout, winner: ${winner}`);
+        });
+        const gameState = game.getState();
+        io.to(roomCode).emit("game_restarted", { gameState, room });
+        logger_1.logger.info(`Rematch started in room ${roomCode}`);
+    });
 }
 // ── Shared finish helper ──────────────────────────────────────────────────────
 function finishGame(io, roomCode, termination, winner) {

@@ -134,3 +134,38 @@ svg {
   background: rgba(99, 102, 241, 0.35);
   color: var(--foreground);
 }
+
+/* ── Chess Board Polish Animations ────────────────────────────── */
+
+@keyframes capture-pulse {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+@keyframes game-over-fade-in {
+  0% { opacity: 0; transform: scale(0.92); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes dot-appear {
+  0% { opacity: 0; transform: scale(0.5); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes check-pulse {
+  0%, 100% { box-shadow: inset 0 0 16px 4px rgba(239, 68, 68, 0.55); }
+  50% { box-shadow: inset 0 0 24px 8px rgba(239, 68, 68, 0.75); }
+}
+
+.animate-capture-pulse {
+  animation: capture-pulse 300ms ease-out;
+}
+
+.animate-game-over-fade-in {
+  animation: game-over-fade-in 400ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-dot-appear {
+  animation: dot-appear 150ms ease-out both;
+}

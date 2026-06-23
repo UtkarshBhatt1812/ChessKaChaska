@@ -7,11 +7,14 @@ import {
   moveMade,
   gameOver,
   setDrawOffer,
+  rematchRequested,
+  gameRestarted,
   selectMyColor,
   selectIsSpectator,
   selectGameState,
 } from "@/app/store/roomSlice";
 import { setError } from "@/app/store/roomSlice";
+import type { GameState, PlayerColor, RoomState } from "@/app/store/roomSlice";
 
 export function useChessGame(roomCode: string | null) {
   const dispatch = useAppDispatch();
@@ -53,10 +56,20 @@ export function useChessGame(roomCode: string | null) {
       dispatch(setDrawOffer(payload.fromColor));
     };
 
+    const onRematchRequest = (payload: { fromColor: PlayerColor }) => {
+      dispatch(rematchRequested(payload.fromColor));
+    };
+
+    const onGameRestarted = (payload: { gameState: GameState; room: RoomState }) => {
+      dispatch(gameRestarted(payload));
+    };
+
     socket.on("move_made", onMoveMade);
     socket.on("game_over", onGameOver);
     socket.on("illegal_move", onIllegalMove);
     socket.on("draw_offer", onDrawOffer);
+    socket.on("rematch_request", onRematchRequest);
+    socket.on("game_restarted", onGameRestarted);
 
     return () => {
       // ✅ FIX 2 (continued): Remove only the specific handlers registered above.
@@ -64,6 +77,8 @@ export function useChessGame(roomCode: string | null) {
       socket.off("game_over", onGameOver);
       socket.off("illegal_move", onIllegalMove);
       socket.off("draw_offer", onDrawOffer);
+      socket.off("rematch_request", onRematchRequest);
+      socket.off("game_restarted", onGameRestarted);
     };
   }, [dispatch, roomCode]);
 
@@ -116,5 +131,29 @@ export function useChessGame(roomCode: string | null) {
     [roomCode, isSpectator, dispatch]
   );
 
-  return { myColor, isSpectator, sendMove, resign, offerDraw, respondToDraw };
+  const requestRematch = useCallback(() => {
+    if (!roomCode || isSpectator) return;
+    const socket = getSocket();
+    socket.emit("rematch_request", { roomCode });
+  }, [roomCode, isSpectator]);
+
+  const respondToRematch = useCallback(
+    (accepted: boolean) => {
+      if (!roomCode || isSpectator) return;
+      const socket = getSocket();
+      socket.emit("rematch_response", { roomCode, accepted });
+    },
+    [roomCode, isSpectator]
+  );
+
+  return {
+    myColor,
+    isSpectator,
+    sendMove,
+    resign,
+    offerDraw,
+    respondToDraw,
+    requestRematch,
+    respondToRematch,
+  };
 }

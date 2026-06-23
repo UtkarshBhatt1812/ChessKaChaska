@@ -1,13 +1,34 @@
 "use client";
 
+import { Chess } from "chess.js";
 import { useAppSelector } from "@/app/store/hooks";
-import { selectRoom, selectGameState, selectDrawOffer, selectRoomError } from "@/app/store/roomSlice";
+import { selectRoom, selectGameState, selectDrawOffer, selectRematchRequest, selectRoomError } from "@/app/store/roomSlice";
 import { useChessGame } from "@/app/hooks/useChessGame";
+import { useRouter } from "next/navigation";
+import { useRoom } from "@/app/hooks/useRoom";
 import ChessBoard from "@/app/play/components/ChessBoard";
 import PlayerCard from "@/app/play/components/PlayerCard";
 import ChatSidebar from "./ChatSidebar";
 
 const STARTING_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
+function getKingSquare(game: Chess): string | null {
+  if (!game.isCheck())
+     return null;
+
+  const board = game.board();
+  const turn = game.turn();
+  
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const piece = board[r][c];
+      if (piece && piece.type === "k" && piece.color === turn) {
+        return piece.square;
+      }
+    }
+  }
+  return null;
+}
 
 type Props = {
   roomCode: string;
@@ -21,11 +42,14 @@ function formatTime(ms: number) {
 }
 
 export default function MultiplayerArena({ roomCode }: Props) {
+  const router = useRouter();
+  const { leaveRoom } = useRoom();
   const room = useAppSelector(selectRoom);
   const gameState = useAppSelector(selectGameState);
   const error = useAppSelector(selectRoomError);
   const drawOffer = useAppSelector(selectDrawOffer);
-  const { myColor, isSpectator, sendMove, resign, offerDraw, respondToDraw } =
+  const rematchRequest = useAppSelector(selectRematchRequest);
+  const { myColor, isSpectator, sendMove, resign, offerDraw, respondToDraw, requestRematch, respondToRematch } =
     useChessGame(roomCode);
 
   if (!room) return null;
@@ -64,6 +88,39 @@ export default function MultiplayerArena({ roomCode }: Props) {
     statusText = `Game Over: ${gameState.termination}`;
   }
 
+  // Derive board polish states
+  const localGame = gameState ? new Chess(gameState.fen) : null;
+  const kingSquare = localGame ? getKingSquare(localGame) : null;
+  
+  const lastMoveRecord = gameState?.history?.[gameState.history.length - 1];
+  const lastMove = lastMoveRecord 
+    ? { from: lastMoveRecord.uci.slice(0, 2), to: lastMoveRecord.uci.slice(2, 4) } 
+    : null;
+
+  const isGameOver = room.status === "completed" || !!gameState?.termination;
+
+  const gameOverResult = isGameOver
+    ? {
+        winner: gameState?.winner === "draw" || !gameState?.winner 
+          ? null 
+          : (gameState.winner === "white" ? "White" : "Black"),
+        termination: gameState?.termination || "Game Over",
+      }
+    : null;
+
+  const handleRematch = () => {
+    if (rematchRequest === (myColor === "white" ? "black" : "white")) {
+      respondToRematch(true);
+    } else {
+      requestRematch();
+    }
+  };
+
+  const handleNewGame = () => {
+    leaveRoom(roomCode);
+    router.push("/lobby");
+  };
+
   // Is there an incoming draw offer for the local player to respond to?
   const hasIncomingDrawOffer =
     drawOffer !== null && drawOffer !== myColor && !isSpectator;
@@ -87,6 +144,14 @@ export default function MultiplayerArena({ roomCode }: Props) {
           statusText={statusText}
           onMove={handleMove}
           boardOrientation={bottomColor}
+          game={localGame}
+          lastMove={lastMove}
+          isCheck={gameState?.isCheck}
+          kingSquare={kingSquare}
+          isGameOver={isGameOver}
+          gameOverResult={gameOverResult}
+          onRematch={handleRematch}
+          onNewGame={handleNewGame}
         />
 
         <PlayerCard
@@ -135,6 +200,36 @@ export default function MultiplayerArena({ roomCode }: Props) {
                 </button>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Rematch Incoming Request */}
+        {!isGameActive && isGameOver && rematchRequest && rematchRequest !== myColor && !isSpectator && (
+          <div className="flex items-center gap-3 px-4 py-3 bg-indigo-500/10 border border-indigo-500/30 rounded-xl mt-4">
+            <span className="flex-1 text-sm text-indigo-300 font-medium">
+              Opponent requested a rematch
+            </span>
+            <button
+              onClick={() => respondToRematch(true)}
+              className="px-4 py-1.5 text-sm text-white bg-indigo-600 rounded-lg hover:bg-indigo-500 transition shadow-lg"
+            >
+              Accept
+            </button>
+            <button
+              onClick={() => respondToRematch(false)}
+              className="px-4 py-1.5 text-sm text-red-400 bg-red-400/10 rounded-lg hover:bg-red-400/20 transition"
+            >
+              Decline
+            </button>
+          </div>
+        )}
+        
+        {/* Rematch Outgoing Request */}
+        {!isGameActive && isGameOver && rematchRequest === myColor && !isSpectator && (
+          <div className="flex items-center justify-center px-4 py-3 bg-white/5 border border-white/10 rounded-xl mt-4">
+            <span className="text-sm text-gray-400">
+              Waiting for opponent to accept rematch...
+            </span>
           </div>
         )}
       </div>

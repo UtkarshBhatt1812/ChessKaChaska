@@ -100,6 +100,13 @@ export type SendMessagePayload = {
 export type TypingPayload = {
     roomCode: string;
 };
+export type RematchRequestPayload = {
+    roomCode: string;
+};
+export type RematchResponsePayload = {
+    roomCode: string;
+    accepted: boolean;
+};
 export type RoomCreatedPayload = {
     room: RoomState;
     myColor: PlayerColor;
@@ -160,6 +167,8 @@ export type ClientToServerEvents = {
     draw_response: (payload: DrawResponsePayload) => void;
     send_message: (payload: SendMessagePayload) => void;
     typing: (payload: TypingPayload) => void;
+    rematch_request: (payload: RematchRequestPayload) => void;
+    rematch_response: (payload: RematchResponsePayload) => void;
 };
 export type ServerToClientEvents = {
     room_created: (payload: RoomCreatedPayload) => void;
@@ -188,6 +197,16 @@ export type ServerToClientEvents = {
     receive_message: (payload: ChatMessage) => void;
     typing: (payload: {
         username: string;
+    }) => void;
+    rematch_request: (payload: {
+        fromColor: PlayerColor;
+    }) => void;
+    rematch_accepted: (payload: {
+        gameState: GameState;
+    }) => void;
+    game_restarted: (payload: {
+        gameState: GameState;
+        room: RoomState;
     }) => void;
     error: (payload: ErrorPayload) => void;
 };

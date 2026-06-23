@@ -50,10 +50,12 @@ type TimerState = {
 
 export class GameInstance {
   readonly roomCode: string;
+  readonly initialSeconds: number;
   chess: Chess;
   history: MoveRecord[] = [];
   timers: TimerState;
   drawOfferedBy: PlayerColor | null = null;
+  rematchRequestedBy: PlayerColor | null = null;
   private timerInterval: NodeJS.Timeout | null = null;
   private nextBroadcastAt = 0;
   private onSecondTick: ((gameState: GameState) => void) | null = null;
@@ -61,10 +63,28 @@ export class GameInstance {
 
   constructor(roomCode: string, initialSeconds: number) {
     this.roomCode = roomCode;
+    this.initialSeconds = initialSeconds;
     this.chess = new Chess();
     this.timers = {
       white: initialSeconds * 1000,
       black: initialSeconds * 1000,
+      lastTick: Date.now(),
+      active: false,
+    };
+  }
+
+  /**
+   * Reset the game for a rematch — fresh board, timers, history.
+   */
+  reset() {
+    this.stopTimers();
+    this.chess = new Chess();
+    this.history = [];
+    this.drawOfferedBy = null;
+    this.rematchRequestedBy = null;
+    this.timers = {
+      white: this.initialSeconds * 1000,
+      black: this.initialSeconds * 1000,
       lastTick: Date.now(),
       active: false,
     };
@@ -246,6 +266,16 @@ export class GameManager {
     if (!game) return null;
     game.stopTimers();
     return game.getState();
+  }
+
+  /**
+   * Reset the game for a rematch — fresh board, timers, history.
+   */
+  reset(roomCode: string): GameInstance | undefined {
+    const game = this.games.get(roomCode);
+    if (!game) return undefined;
+    game.reset();
+    return game;
   }
 }
 

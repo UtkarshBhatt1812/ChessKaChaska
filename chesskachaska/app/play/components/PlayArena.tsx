@@ -12,6 +12,21 @@ import { useStockfish } from "@/app/hooks/useStockfish";
 export type LobbyStep = "identity" | "mode";
 export type GameMode = "local" | "computer" | "multiplayer";
 
+function getKingSquare(game: Chess): string | null {
+  if (!game.isCheck()) return null;
+  const board = game.board();
+  const turn = game.turn();
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const piece = board[r][c];
+      if (piece && piece.type === "k" && piece.color === turn) {
+        return piece.square;
+      }
+    }
+  }
+  return null;
+}
+
 function getGameStatus(
   game: Chess,
   gameStarted: boolean,
@@ -59,6 +74,17 @@ function getGameStatus(
   return `${game.turn() === "w" ? "White" : "Black"} to move.`;
 }
 
+function getGameOverResult(game: Chess) {
+  if (!game.isGameOver()) return null;
+  if (game.isCheckmate()) {
+    return { winner: game.turn() === "w" ? "Black" : "White", termination: "Checkmate" };
+  }
+  if (game.isStalemate()) return { winner: null, termination: "Stalemate" };
+  if (game.isThreefoldRepetition()) return { winner: null, termination: "Repetition" };
+  if (game.isInsufficientMaterial()) return { winner: null, termination: "Insufficient Material" };
+  return { winner: null, termination: "Draw" };
+}
+
 export default function PlayArena() {
   const currentUser = useAppSelector(selectAuthUser);
   const authReady = useAppSelector(selectAuthReady);
@@ -72,6 +98,13 @@ export default function PlayArena() {
   const currentTurn = game.turn();
   const isGameOver = game.isGameOver();
   const { evalScore, mate } = useStockfish(position);
+  
+  const history = game.history({ verbose: true });
+  const lastMoveObj = history.length > 0 ? history[history.length - 1] : null;
+  const lastMove = lastMoveObj ? { from: lastMoveObj.from, to: lastMoveObj.to } : null;
+  const kingSquare = getKingSquare(game);
+  const gameOverResult = getGameOverResult(game);
+
   const effectiveLobbyStep =
     currentUser && !gameStarted ? ("mode" as LobbyStep) : lobbyStep;
   const statusText =
@@ -211,6 +244,14 @@ export default function PlayArena() {
             currentTurn={currentTurn}
             statusText={statusText}
             onMove={handleMove}
+            game={game}
+            lastMove={lastMove}
+            isCheck={game.isCheck()}
+            kingSquare={kingSquare}
+            isGameOver={isGameOver}
+            gameOverResult={gameOverResult}
+            onRematch={handleResetMatch}
+            onNewGame={handleBackToIdentity}
           />
 
           <PlayerCard

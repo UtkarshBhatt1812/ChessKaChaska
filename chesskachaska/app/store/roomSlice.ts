@@ -69,6 +69,7 @@ type RoomSliceState = {
   isSpectator: boolean;
   connectionStatus: "disconnected" | "connecting" | "connected" | "reconnecting";
   drawOfferedBy: PlayerColor | null;
+  rematchRequestedBy: PlayerColor | null;
   error: string | null;
 };
 
@@ -79,6 +80,7 @@ const initialState: RoomSliceState = {
   isSpectator: false,
   connectionStatus: "disconnected",
   drawOfferedBy: null,
+  rematchRequestedBy: null,
   error: null,
 };
 
@@ -189,6 +191,21 @@ const roomSlice = createSlice({
     setDrawOffer(state, action: PayloadAction<PlayerColor | null>) {
       state.drawOfferedBy = action.payload;
     },
+    rematchRequested(state, action: PayloadAction<PlayerColor>) {
+      state.rematchRequestedBy = action.payload;
+    },
+    rematchDeclined(state) {
+      state.rematchRequestedBy = null;
+    },
+    gameRestarted(
+      state,
+      action: PayloadAction<{ gameState: GameState; room: RoomState }>
+    ) {
+      state.gameState = action.payload.gameState;
+      state.room = action.payload.room;
+      state.rematchRequestedBy = null;
+      state.drawOfferedBy = null;
+    },
     setError(state, action: PayloadAction<string | null>) {
       state.error = action.payload;
     },
@@ -211,6 +228,9 @@ export const {
   reconnectSuccess,
   setJoinedAsSpectator,
   setDrawOffer,
+  rematchRequested,
+  rematchDeclined,
+  gameRestarted,
   setError,
   clearRoom,
 } = roomSlice.actions;
@@ -221,6 +241,7 @@ export const selectMyColor = (s: RootState) => s.room.myColor;
 export const selectIsSpectator = (s: RootState) => s.room.isSpectator;
 export const selectConnectionStatus = (s: RootState) => s.room.connectionStatus;
 export const selectDrawOffer = (s: RootState) => s.room.drawOfferedBy;
+export const selectRematchRequest = (s: RootState) => s.room.rematchRequestedBy;
 export const selectRoomError = (s: RootState) => s.room.error;
 
 export default roomSlice.reducer;
