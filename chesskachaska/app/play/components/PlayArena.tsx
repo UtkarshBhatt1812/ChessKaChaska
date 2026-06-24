@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState,useRef } from "react";
 import { Chess } from "chess.js";
 import { selectAuthReady, selectAuthUser } from "@/app/store/authSlice";
 import { useAppSelector } from "@/app/store/hooks";
@@ -8,7 +8,9 @@ import ChessBoard from "./ChessBoard";
 import Sidebar from "./Sidebar";
 import EvaluationBar from "./EvaluationBar";
 import PlayerCard from "./PlayerCard";
-import { useStockfish } from "@/app/hooks/useStockfish";
+import { useStockfishBot } from "@/app/hooks/useStockfishBot";
+import { useStockfishEvaluation } from "@/app/hooks/useStockfishEvaluation";
+
 export type LobbyStep = "identity" | "mode";
 export type GameMode = "local" | "computer" | "multiplayer";
 
@@ -97,7 +99,7 @@ export default function PlayArena() {
   const moveHistory = game.history();
   const currentTurn = game.turn();
   const isGameOver = game.isGameOver();
-  const { evalScore, mate } = useStockfish(position);
+  const { evalScore, mate } = useStockfishEvaluation(position);
   
   const history = game.history({ verbose: true });
   const lastMoveObj = history.length > 0 ? history[history.length - 1] : null;
@@ -111,28 +113,48 @@ export default function PlayArena() {
     !authReady && !gameStarted
       ? "Restoring your session at the board."
       : getGameStatus(game, gameStarted, effectiveLobbyStep, gameMode);
+const stockfishRef = useRef<Worker | null>(null);
 
-  useEffect(() => {
-    if (!gameStarted || gameMode !== "computer" || currentTurn !== "b" || isGameOver) {
-      return;
-    }
 
-    const timeoutId = window.setTimeout(() => {
-      const possibleMoves = game.moves({ verbose: true });
+const { getBestMove } = useStockfishBot();
 
-      if (possibleMoves.length === 0) {
-        return;
-      }
+useEffect(() => {
+  if (
+    !gameStarted ||
+    gameMode !== "computer" ||
+    currentTurn !== "b" ||
+    isGameOver
+  ) {
+    return;
+  }
 
-      const nextGame = new Chess(game.fen());
-      // Fallback simple bot: just pick random move
-      const randomMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
-      nextGame.move(randomMove);
-      setGame(nextGame);
-    }, 500);
+  let cancelled = false;
 
-    return () => window.clearTimeout(timeoutId);
-  }, [currentTurn, game, gameMode, gameStarted, isGameOver]);
+  const playMove = async () => {
+    const bestMove = await getBestMove(game.fen());
+
+    if (cancelled || !bestMove) return;
+
+    const nextGame = new Chess(game.fen());
+
+    nextGame.move({
+      from: bestMove.slice(0, 2),
+      to: bestMove.slice(2, 4),
+      promotion:
+        bestMove.length > 4
+          ? (bestMove[4] as "q" | "r" | "b" | "n")
+          : undefined,
+    });
+
+    setGame(nextGame);
+  };
+
+  playMove();
+
+  return () => {
+    cancelled = true;
+  };
+}, [currentTurn, game, gameMode, gameStarted, isGameOver, getBestMove]);
 
   const handleContinueAsGuest = () => {
     setGame(new Chess());
@@ -228,7 +250,7 @@ export default function PlayArena() {
       
 
       <section className="flex-1 flex flex-col md:flex-row p-8 gap-12 items-center justify-center">
-        <EvaluationBar evalScore={evalScore} />
+        <EvaluationBar evalScore={evalScore} mate={mate} />
 
         <div className="flex flex-col gap-6 w-full max-w-[640px]">
           <PlayerCard
